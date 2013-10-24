@@ -100,19 +100,35 @@ namespace MonoSpriter
             if (entity.Animations.Count > 0)
                 _currentAnimation = entity.Animations[0];
 
-            _isPlaying = true;
+            _isPlaying = false;
         }
         #endregion
 
 
         #region Animation Methods
         /// <summary>
-        /// Sets the animation to a specific frame
+        /// Play the animation
         /// </summary>
-        /// <param name="frame">The frame to set the animation to</param>
-        public void SetFrame(int frame)
+        public void Play()
         {
-            _frame = (int)MathHelper.Clamp(frame, 0, _currentAnimation.Frames.Count - 1);
+            _isPlaying = true;
+        }
+
+        /// <summary>
+        /// Pause the animation
+        /// </summary>
+        public void Pause()
+        {
+            _isPlaying = false;
+        }
+
+        /// <summary>
+        /// Stop the animation
+        /// </summary>
+        public void Stop()
+        {
+            _isPlaying = false;
+            Reset();
         }
 
         /// <summary>
@@ -122,6 +138,15 @@ namespace MonoSpriter
         {
             _elapsedTime = 0;
             _frame = 0;
+        }
+
+        /// <summary>
+        /// Sets the animation to a specific frame
+        /// </summary>
+        /// <param name="frame">The frame to set the animation to</param>
+        public void SetFrame(int frame)
+        {
+            _frame = (int)MathHelper.Clamp(frame, 0, _currentAnimation.Frames.Count - 1);
         }
 
 

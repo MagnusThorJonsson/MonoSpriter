@@ -1,4 +1,3 @@
-C:\Users\Not a Pilot\Documents\My Development\All the Bees in the World\Game Development\Projects\MonoSpriter\obj\Debug\MonoSpriter.csprojResolveAssemblyReference.cache
 C:\Users\Not a Pilot\Documents\My Development\All the Bees in the World\Game Development\Projects\MonoSpriter\bin\Debug\MonoSpriter.dll
 C:\Users\Not a Pilot\Documents\My Development\All the Bees in the World\Game Development\Projects\MonoSpriter\bin\Debug\MonoSpriter.pdb
 C:\Users\Not a Pilot\Documents\My Development\All the Bees in the World\Game Development\Projects\MonoSpriter\bin\Debug\MonoGame.Framework.dll

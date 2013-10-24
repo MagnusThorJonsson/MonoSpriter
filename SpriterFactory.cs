@@ -84,7 +84,7 @@ namespace MonoSpriter
         {
             // TODO: All of this needs a refactoring, data structure not completely A-OK
             // Get the first entity
-            SpriterEntity entity = _entities.Where(s => string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();//.Find(s => string.Equals(s.Name, name));
+            SpriterEntity entity = _entities.Find(s => string.Equals(s.Name, name));
             if (entity == null)
                 throw new ArgumentNullException("name");
 
@@ -139,18 +139,6 @@ namespace MonoSpriter
                                 currentKey.Parent
                             )
                         );
-                        /*
-                           frameImages.Add(
-                               Tween(
-                                   animation.Value.Timelines[currentKey.Timeline].Keys[currentKey.Key].Object,
-                                   animation.Value.Timelines[nextKey.Timeline].Keys[nextKey.Key].Object,
-                                   amount,
-                                   animation.Value.Timelines[currentKey.Timeline].Keys[currentKey.Key].DoSpin,
-                                   currentKey.ZIndex,
-                                   currentKey.Parent
-                               )
-                           );
-                         */
                     }
 
                     // Tween bones
@@ -190,7 +178,7 @@ namespace MonoSpriter
         #endregion
 
 
-        #region Static Methods
+        #region Tween Methods
         /// <summary>
         /// Makes a tween of two objects
         /// </summary>
