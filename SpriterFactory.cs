@@ -22,68 +22,60 @@ namespace MonoSpriter
     public class SpriterFactory
     {
         #region Variables & Properties
-        private Dictionary<int, Dictionary<int, Texture2D>> _sprites;
-        private List<SpriterEntity> _entities;
+        private static Dictionary<int, Dictionary<int, Texture2D>> _sprites;
+        private static List<SpriterEntity> _entities;
         internal static Dictionary<int, SpriterFolder> _folders;
         #endregion
 
 
         #region Constructor
         /// <summary>
-        /// Creates and Initializes the Spriter Factory
+        /// Initializes static variables
         /// </summary>
-        /// <param name="xmlDoc">The Spriter object data to work from</param>
-        /// <param name="content">The content manager for the textures</param>
-        public SpriterFactory(XDocument xmlDoc, ContentManager content)
+        static SpriterFactory()
         {
             _sprites = new Dictionary<int, Dictionary<int, Texture2D>>();
             _entities = new List<SpriterEntity>();
             _folders = new Dictionary<int, SpriterFolder>();
 
-            // Ready Folders and Textures
-            foreach (XElement folderRow in xmlDoc.Descendants("spriter_data").Elements("folder"))
-            {
-                SpriterFolder folder = new SpriterFolder(folderRow);
-                _folders.Add(folder.Id, folder);
 
-                Dictionary<int, Texture2D> spriteList = new Dictionary<int, Texture2D>();
-                foreach (SpriterFile file in folder.Files.Values)
-                {
-                    try
-                    {
-                        string name = file.Name.Substring(0, file.Name.Length - System.IO.Path.GetExtension(file.Name).Length);
-                        Texture2D tex = content.Load<Texture2D>("Characters\\Test\\" + name.Replace("/", "\\"));
-                        spriteList[file.Id] = tex;
-                    }
-                    catch (ContentLoadException e)
-                    {
-                        Console.WriteLine(e.Message);
-                    }
-                    catch (Exception) { }
-                }
-                _sprites.Add(folder.Id, spriteList);
-            }
-
-            // Ready Entities
-            foreach (XElement entityRow in xmlDoc.Descendants("spriter_data").Elements("entity"))
-                _entities.Add(new SpriterEntity(entityRow));
         }
         #endregion
 
 
         #region Factory Methods
         /// <summary>
-        /// Creates a new Spriter Object
+        /// Creates a new Spriter Object from the passed in data
         /// </summary>
-        /// <param name="name">The name of the object</param>
+        /// <param name="xmlDoc">The SCML file</param>
+        /// <param name="content">The content manager</param>
+        /// <param name="path">The path to the entities assets</param>
+        /// <param name="name">The name of the entity</param>
         /// <param name="fps">The frames per second the animations run at</param>
         /// <param name="scale">The scale of the object</param>
         /// <param name="offset">The offset</param>
         /// <returns>A new spriter object</returns>
-        public SpriterObject Create(string name, int fps, Vector2 scale, Vector2 offset)
+        public static SpriterObject Create(XDocument xmlDoc, ContentManager content, string path, string name, int fps, Vector2 scale, Vector2 offset)
+        {
+            // Prepare data
+            LoadData(path, xmlDoc, content);
+
+            return Create(path, name, fps, scale, offset);
+        }
+
+        /// <summary>
+        /// Creates a new Spriter Object from already loaded data
+        /// </summary>
+        /// <param name="path">The path to the entities assets</param>
+        /// <param name="name">The name of the entity</param>
+        /// <param name="fps">The frames per second the animations run at</param>
+        /// <param name="scale">The scale of the object</param>
+        /// <param name="offset">The offset</param>
+        /// <returns>A new spriter object</returns>
+        public static SpriterObject Create(string path, string name, int fps, Vector2 scale, Vector2 offset)
         {
             // TODO: All of this needs a refactoring, data structure not completely A-OK
-            // Get the first entity
+            // Get the entity by name
             SpriterEntity entity = _entities.Find(s => string.Equals(s.Name, name));
             if (entity == null)
                 throw new ArgumentNullException("name");
@@ -169,11 +161,55 @@ namespace MonoSpriter
                         image.Transform = frame.Transform(image, scale, offset);
 
                     animation.Value.Frames.Add(frame);
-
                 }
             }
 
             return new SpriterObject(name, fps, entity, _sprites);
+        }
+        #endregion
+
+
+        #region Private Helper Methods
+        /// <summary>
+        /// Loads all the relevant data from the SCML file
+        /// </summary>
+        /// <param name="path">The path to the entities assets</param>
+        /// <param name="xmlDoc">The SCML data</param>
+        /// <param name="content">The content manager to hold the sprites</param>
+        private static void LoadData(string path, XDocument xmlDoc, ContentManager content)
+        {
+            // Reset content
+            _sprites.Clear();
+            _entities.Clear();
+            _folders.Clear();
+
+            // Ready Folders and Textures
+            foreach (XElement folderRow in xmlDoc.Descendants("spriter_data").Elements("folder"))
+            {
+                SpriterFolder folder = new SpriterFolder(folderRow);
+                _folders.Add(folder.Id, folder);
+
+                Dictionary<int, Texture2D> spriteList = new Dictionary<int, Texture2D>();
+                foreach (SpriterFile file in folder.Files.Values)
+                {
+                    try
+                    {
+                        string assetName = file.Name.Substring(0, file.Name.Length - System.IO.Path.GetExtension(file.Name).Length);
+                        Texture2D tex = content.Load<Texture2D>(path + assetName.Replace("/", "\\"));
+                        spriteList[file.Id] = tex;
+                    }
+                    catch (ContentLoadException e)
+                    {
+                        Console.WriteLine(e.Message);
+                    }
+                    catch (Exception) { }
+                }
+                _sprites.Add(folder.Id, spriteList);
+            }
+
+            // Ready Entities
+            foreach (XElement entityRow in xmlDoc.Descendants("spriter_data").Elements("entity"))
+                _entities.Add(new SpriterEntity(entityRow));
         }
         #endregion
 

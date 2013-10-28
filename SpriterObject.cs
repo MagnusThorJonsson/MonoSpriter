@@ -13,6 +13,9 @@ namespace MonoSpriter
     /// </summary>
     public sealed class SpriterObject
     {
+        /// <summary>
+        /// Helper Struct used for calculating positional translation
+        /// </summary>
         private struct RenderedPosition
         {
             public Vector2 Position;
@@ -77,8 +80,26 @@ namespace MonoSpriter
         private double _elapsedTime;
         private int _frame;
 
+
+        public string CurrentAnimation
+        {
+            get
+            {
+                if (_currentAnimation != null)
+                    return _currentAnimation.Name;
+
+                return null;
+            }
+        }
         private SpriterAnimation _currentAnimation;
         private Dictionary<int, Dictionary<int, Texture2D>> _sprites;
+
+        private Vector2 _offset;
+        public Vector2 Offset
+        {
+            get { return _offset; }
+            set { _offset = value; }
+        }
         #endregion
 
 
@@ -101,6 +122,7 @@ namespace MonoSpriter
                 _currentAnimation = entity.Animations[0];
 
             _isPlaying = false;
+            _offset = Vector2.Zero;
         }
         #endregion
 
@@ -210,7 +232,7 @@ namespace MonoSpriter
         #endregion
 
 
-        #region Main Methods
+        #region Update & Draw
         /// <summary>
         /// Updates the object
         /// </summary>
@@ -236,16 +258,23 @@ namespace MonoSpriter
             }
         }
 
-        private RenderedPosition GetRenderedPosition(SpriterFrameImage fimg)
+
+        /// <summary>
+        /// Calculates the rendered position of the sprite
+        /// </summary>
+        /// <param name="image">The Spriter Frame image</param>
+        /// <returns>A new rendered position object</returns>
+        private RenderedPosition GetRenderedPosition(SpriterFrameImage image)
         {
             // Apply transforms
-            SpriterFrameTransform transform = fimg.Transform;
+            SpriterFrameTransform transform = image.Transform;
             RenderedPosition result = new RenderedPosition();
 
             result.Alpha = transform.Alpha;
 
             result.Position.Y = Position.Y + (transform.Position.Y * (DoFlipY ? -1 : 1));
             result.Position.X = Position.X + (transform.Position.X * (DoFlipX ? -1 : 1));
+            result.Position += _offset;
 
             bool flipX = DoFlipX;
             bool flipY = DoFlipY;
@@ -256,15 +285,15 @@ namespace MonoSpriter
                 result.Angle *= -1;
             }
 
-            result.Pivot = fimg.Pivot;
+            result.Pivot = image.Pivot;
             if (flipX)
             {
-                result.Pivot.X = _sprites[fimg.Folder][fimg.File].Width - result.Pivot.X;
+                result.Pivot.X = _sprites[image.Folder][image.File].Width - result.Pivot.X;
             }
 
             if (flipY)
             {
-                result.Pivot.Y = _sprites[fimg.Folder][fimg.File].Height - result.Pivot.Y;
+                result.Pivot.Y = _sprites[image.Folder][image.File].Height - result.Pivot.Y;
             }
 
             result.Scale = transform.Scale;
