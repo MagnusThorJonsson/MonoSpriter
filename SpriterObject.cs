@@ -76,11 +76,24 @@ namespace MonoSpriter
         public bool IsPlaying { get { return _isPlaying; } }
         private bool _isPlaying;
 
-        private SpriterEntity _entity;
-        private double _elapsedTime;
-        private int _frame;
+        /// <summary>
+        /// Flags whether the animation is finished
+        /// </summary>
+        public bool IsFinished
+        {
+            get
+            {
+                if (_currentAnimation != null && 
+                    !_currentAnimation.IsLoop && _elapsedTime == _currentAnimation.Length)
+                    return true;
 
+                return false;
+            }
+        }
 
+        /// <summary>
+        /// The currently selected animation
+        /// </summary>
         public string CurrentAnimation
         {
             get
@@ -92,14 +105,21 @@ namespace MonoSpriter
             }
         }
         private SpriterAnimation _currentAnimation;
-        private Dictionary<int, Dictionary<int, Texture2D>> _sprites;
 
-        private Vector2 _offset;
+        /// <summary>
+        ///  The drawing offset
+        /// </summary>
         public Vector2 Offset
         {
             get { return _offset; }
             set { _offset = value; }
         }
+        private Vector2 _offset;
+ 
+        private Dictionary<int, Dictionary<int, Texture2D>> _sprites;
+        private SpriterEntity _entity;
+        private double _elapsedTime;
+        private int _frame;
         #endregion
 
 
@@ -173,7 +193,39 @@ namespace MonoSpriter
 
 
         /// <summary>
-        /// Sets a specific animation to play
+        /// Transitions to an animation without resetting the position.
+        /// Note that the animation being transitioned to needs to be 
+        /// of the same length, or longer, as the one being swapped out.
+        /// </summary>
+        /// <param name="id">The id of the animation</param>
+        public void TransitionAnimation(int id)
+        {
+            if (_entity.Animations.ContainsKey(id))
+            {
+                _currentAnimation = _entity.Animations[id];
+                
+                if (_entity.Animations[id].Frames.Count >= _frame)
+                    Reset();
+            }
+        }
+
+
+        /// <summary>
+        /// Transitions to an animation without resetting the position.
+        /// Note that the animation being transitioned to needs to be 
+        /// of the same length, or longer, as the one being swapped out.
+        /// </summary>
+        /// <param name="name">The name of the animation</param>
+        public void TransitionAnimation(string name)
+        {
+            int animId = _entity.GetAnimationId(name);
+            if (animId != -1)
+                TransitionAnimation(animId);
+        }
+
+
+        /// <summary>
+        /// Sets a specific animation and resets the current frame position
         /// </summary>
         /// <param name="id">The id of the animation</param>
         public void SetAnimation(int id)
@@ -187,7 +239,7 @@ namespace MonoSpriter
 
 
         /// <summary>
-        /// Sets a specific animation to play
+        /// Sets a specific animation and resets the current frame position
         /// </summary>
         /// <param name="name">The name of the animation</param>
         public void SetAnimation(string name)
@@ -195,6 +247,19 @@ namespace MonoSpriter
             int animId = _entity.GetAnimationId(name);
             if (animId != -1)
                 SetAnimation(animId);
+        }
+
+        /// <summary>
+        /// Checks if an entity has a specific animation listed
+        /// </summary>
+        /// <param name="name">The name of the animation</param>
+        /// <returns>True if animation was found</returns>
+        public bool HasAnimation(string name)
+        {
+            if (_entity.GetAnimationId(name) != -1)
+                return true;
+
+            return false;
         }
         #endregion
 
@@ -251,7 +316,7 @@ namespace MonoSpriter
                 }
 
                 _frame = (int)MathHelper.Clamp(
-                    (int)Math.Ceiling((_elapsedTime / 1000.0) * _fps),
+                    (int)Math.Ceiling((_elapsedTime * 0.001) * _fps),
                     0,
                     _currentAnimation.Frames.Count - 1
                 );

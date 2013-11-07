@@ -70,6 +70,7 @@ namespace MonoSpriter.Animation
         }
         #endregion
 
+
         #region Helper Methods
         /// <summary>
         /// Gets an animation id
