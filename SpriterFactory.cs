@@ -60,19 +60,18 @@ namespace MonoSpriter
             // Prepare data
             LoadData(path, xmlDoc, content);
 
-            return Create(path, name, fps, scale, offset);
+            return Create(name, fps, scale, offset);
         }
 
         /// <summary>
         /// Creates a new Spriter Object from already loaded data
         /// </summary>
-        /// <param name="path">The path to the entities assets</param>
         /// <param name="name">The name of the entity</param>
         /// <param name="fps">The frames per second the animations run at</param>
         /// <param name="scale">The scale of the object</param>
         /// <param name="offset">The offset</param>
         /// <returns>A new spriter object</returns>
-        public static SpriterObject Create(string path, string name, int fps, Vector2 scale, Vector2 offset)
+        public static SpriterObject Create(string name, int fps, Vector2 scale, Vector2 offset)
         {
             // TODO: All of this needs a refactoring, data structure not completely A-OK
             // Get the entity by name
