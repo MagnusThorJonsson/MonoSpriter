@@ -43,6 +43,7 @@
     <Compile Include="Animation\SpriterFrame.cs" />
     <Compile Include="Animation\SpriterFrameBone.cs" />
     <Compile Include="Animation\SpriterFrameImage.cs" />
+    <Compile Include="Animation\SpriterFramePoint.cs" />
     <Compile Include="Animation\SpriterFrameTransform.cs" />
     <Compile Include="Mainline\MainlineKeyObject.cs" />
     <Compile Include="Skins\CharacterMap.cs" />
@@ -51,6 +52,7 @@
     <Compile Include="Animation\SpriterEntity.cs" />
     <Compile Include="Mainline\MainlineKeyBone.cs" />
     <Compile Include="SpriterFactory.cs" />
+    <Compile Include="Timeline\ITimelineKeyItem.cs" />
     <Compile Include="Timeline\TimelineKeyObject.cs" />
     <Compile Include="Timeline\TimelineKeyBone.cs" />
     <Compile Include="Mainline\MainlineKey.cs" />
@@ -60,6 +62,7 @@
     <Compile Include="Data\SpriterFolder.cs" />
     <Compile Include="Timeline\SpriterTimeline.cs" />
     <Compile Include="Timeline\TimelineKey.cs" />
+    <Compile Include="Timeline\TimelineKeyPoint.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\..\GitHub\MonoGame\MonoGame.Framework\MonoGame.Framework.Windows.csproj">
@@ -67,7 +70,9 @@
       <Name>MonoGame.Framework.Windows</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Content Include="KNOWN-ISSUES.txt" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

@@ -31,6 +31,17 @@ namespace MonoSpriter.Animation
             internal set { _bones = value; } 
         }
         private List<SpriterFrameBone> _bones;
+
+
+        /// <summary>
+        /// The list of points
+        /// </summary>
+        public List<SpriterFramePoint> Points
+        {
+            get { return _points; }
+            internal set { _points = value; }
+        }
+        private List<SpriterFramePoint> _points;
         #endregion
 
         #region Constructor
@@ -43,6 +54,19 @@ namespace MonoSpriter.Animation
         {
             _frames = frames;
             _bones = bones;
+        }
+
+        /// <summary>
+        /// Creates a SpriterFrame
+        /// </summary>
+        /// <param name="frames">The image frames</param>
+        /// <param name="bones">The bones</param>
+        /// <param name="points">The points</param>
+        public SpriterFrame(List<SpriterFrameImage> frames, List<SpriterFrameBone> bones, List<SpriterFramePoint> points)
+        {
+            _frames = frames;
+            _bones = bones;
+            _points = points;
         }
         #endregion
 
@@ -86,6 +110,23 @@ namespace MonoSpriter.Animation
                                                   : new SpriterFrameTransform(offset, 0f, scale, 1f);
 
             return Transform(baseTransform, bone.Scale, bone.Angle, bone.Position, bone.Alpha);
+        }
+
+
+        /// <summary>
+        /// Transforms a Spriter Frame Point
+        /// </summary>
+        /// <param name="bone">The point to transform</param>
+        /// <param name="scale">The scale</param>
+        /// <param name="offset">The position offset</param>
+        /// <returns>A new transform object</returns>
+        public SpriterFrameTransform Transform(SpriterFramePoint point, Vector2 scale, Vector2 offset)
+        {
+            SpriterFrameTransform baseTransform = (point.Parent != -1)
+                                                  ? Transform(Bones[point.Parent], scale, offset)
+                                                  : new SpriterFrameTransform(offset, 0f, scale, 1f);
+
+            return Transform(baseTransform, point.Scale, point.Angle, point.Position, point.Alpha);
         }
 
         /// <summary>

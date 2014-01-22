@@ -20,7 +20,7 @@ namespace MonoSpriter
     /// A Factory class for SpriterObjects and animations
     /// </summary>
     public class SpriterFactory
-    {
+    { 
         #region Variables & Properties
         private static Dictionary<int, Dictionary<int, Texture2D>> _sprites;
         private static List<SpriterEntity> _entities;
@@ -54,13 +54,14 @@ namespace MonoSpriter
         /// <param name="fps">The frames per second the animations run at</param>
         /// <param name="scale">The scale of the object</param>
         /// <param name="offset">The offset</param>
+        /// <param name="baseDepth">The base depth for this entity</param>
         /// <returns>A new spriter object</returns>
-        public static SpriterObject Create(XDocument xmlDoc, ContentManager content, string path, string name, int fps, Vector2 scale, Vector2 offset)
+        public static SpriterObject Create(XDocument xmlDoc, ContentManager content, string path, string name, int fps, Vector2 scale, Vector2 offset, float baseDepth)
         {
             // Prepare data
             LoadData(path, xmlDoc, content);
 
-            return Create(name, fps, scale, offset);
+            return Create(name, fps, scale, offset, baseDepth);
         }
 
         /// <summary>
@@ -70,8 +71,9 @@ namespace MonoSpriter
         /// <param name="fps">The frames per second the animations run at</param>
         /// <param name="scale">The scale of the object</param>
         /// <param name="offset">The offset</param>
+        /// <param name="baseDepth">The base depth for this entity</param>
         /// <returns>A new spriter object</returns>
-        public static SpriterObject Create(string name, int fps, Vector2 scale, Vector2 offset)
+        public static SpriterObject Create(string name, int fps, Vector2 scale, Vector2 offset, float baseDepth)
         {
             // TODO: All of this needs a refactoring, data structure not completely A-OK
             // Get the entity by name
@@ -81,25 +83,23 @@ namespace MonoSpriter
 
             foreach (KeyValuePair<int, SpriterAnimation> animation in entity.Animations)
             {
-
+                // TODO: Change this into a configuration parameter
                 int frameStep = 1000 / fps;
-                for (int frameId = 0; frameId <= animation.Value.Length; frameId += frameStep)
+                for (int frameTime = 0; frameTime <= animation.Value.Length; frameTime += frameStep)
                 {
                     // Prepare tweening process
-                    List<SpriterFrameImage> frameImages = new List<SpriterFrameImage>();
-                    List<SpriterFrameBone> frameBones = new List<SpriterFrameBone>();
                     float currentTime = 0;
                     float nextTime = 0;
 
                     // Fetch and set the frames
-                    MainlineKey currentFrame = (from kf in animation.Value.MainlineKeys
-                                                where kf.Time <= frameId
-                                                orderby kf.Time descending
-                                                select kf).FirstOrDefault();//animation.Value.FindCurrentFrame(frameId);
-                    MainlineKey nextFrame = (from kf in animation.Value.MainlineKeys
-                                             where kf.Time > frameId
-                                             orderby kf.Time ascending
-                                             select kf).FirstOrDefault();//animation.Value.FindNextFrame(frameId);
+                    MainlineKey currentFrame = (from cf in animation.Value.MainlineKeys
+                                                where cf.Time <= frameTime
+                                                orderby cf.Time descending
+                                                select cf).FirstOrDefault();//animation.Value.FindCurrentFrame(frameId);
+                    MainlineKey nextFrame = (from cf in animation.Value.MainlineKeys
+                                             where cf.Time > frameTime
+                                             orderby cf.Time ascending
+                                             select cf).FirstOrDefault();//animation.Value.FindNextFrame(frameId);
 
                     if (nextFrame == null)
                     {
@@ -109,66 +109,161 @@ namespace MonoSpriter
                     else
                         nextTime = nextFrame.Time;
 
-                    currentTime = frameId - currentFrame.Time;
+                    currentTime = frameTime - currentFrame.Time;
                     nextTime -= currentFrame.Time;
 
-                    // Tween object sprites
+                    // Tween objects and bones
                     float amount = MathHelper.Clamp(currentTime / nextTime, 0.0f, 1.0f);
-                    foreach (MainlineKeyObject currentKey in currentFrame.ObjectRefs)
-                    {
-                        MainlineKeyObject nextKey = nextFrame.ObjectRefs.Where(x => x.Timeline == currentKey.Timeline).FirstOrDefault();//.FindObject(currentKey.Id);
-                        TimelineKeyObject next = (nextKey == null ? animation.Value.Timelines[currentKey.Timeline].Keys[currentKey.Key].Object
-                                                                  : animation.Value.Timelines[nextKey.Timeline].Keys[nextKey.Key].Object);
-
-                        frameImages.Add(
-                            Tween(
-                                animation.Value.Timelines[currentKey.Timeline].Keys[currentKey.Key].Object,
-                                next,
-                                amount,
-                                animation.Value.Timelines[currentKey.Timeline].Keys[currentKey.Key].DoSpin,
-                                currentKey.ZIndex,
-                                currentKey.Parent
-                            )
-                        );
-                    }
-
-                    // Tween bones
-                    foreach (MainlineKeyBone currentBone in currentFrame.BoneRefs)
-                    {
-                        MainlineKeyBone nextBone = nextFrame.BoneRefs.Where(x => x.Timeline == currentBone.Timeline).FirstOrDefault();//FindBone(currentBone.Id);
-                        TimelineKeyBone next = (nextBone == null ? animation.Value.Timelines[currentBone.Timeline].Keys[currentBone.Key].Bone
-                                                                 : animation.Value.Timelines[nextBone.Timeline].Keys[nextBone.Key].Bone);
-                        frameBones.Add(
-                            Tween(
-                                animation.Value.Timelines[currentBone.Timeline].Keys[currentBone.Key].Bone,
-                                next,
-                                amount,
-                                animation.Value.Timelines[currentBone.Timeline].Keys[currentBone.Key].DoSpin,
-                                currentBone.Parent
-                            )
-                        );
-                    }
-
+                    List<SpriterFrameImage> frameImages = prepareImageFrames(currentFrame, nextFrame, animation, amount);
+                    List<SpriterFrameBone> frameBones = prepareBoneFrames(currentFrame, nextFrame, animation, amount);
+                    List<SpriterFramePoint> framePoints = preparePointFrames(currentFrame, nextFrame, animation, amount);
 
                     // Create Frames
                     SpriterFrame frame = new SpriterFrame(
                         frameImages.OrderBy(x => x.ZIndex).ToList(),
-                        frameBones
+                        frameBones,
+                        framePoints
                     );
 
                     foreach (SpriterFrameImage image in frame.Frames)
                         image.Transform = frame.Transform(image, scale, offset);
 
+                    foreach (SpriterFramePoint point in frame.Points)
+                        point.Transform = frame.Transform(point, scale, offset);
+
                     animation.Value.Frames.Add(frame);
                 }
             }
 
-            return new SpriterObject(name, fps, entity, _sprites);
+            return new SpriterObject(name, fps, entity, new Dictionary<int,Dictionary<int,Texture2D>>(_sprites), baseDepth);
         }
         #endregion
 
 
         #region Private Helper Methods
+        /// <summary>
+        /// Precalculates tweens for the sprite animations
+        /// </summary>
+        /// <param name="current">The current frame</param>
+        /// <param name="nextFrame">The next frame</param>
+        /// <param name="animation">The animation</param>
+        /// <param name="amount">The amount of tween</param>
+        /// <returns>A list of image frames</returns>
+        private static List<SpriterFrameImage> prepareImageFrames(MainlineKey current, MainlineKey nextFrame, KeyValuePair<int, SpriterAnimation> animation, float amount)
+        {
+            List<SpriterFrameImage> frameImages = new List<SpriterFrameImage>();
+            foreach (MainlineKeyObject currentKey in current.ObjectRefs)
+            {
+                // TODO: IF TIMELINE DOESN'T HAVE A KEY AT THE END THE TWEEN WILL BE CHOPPY ON REPLAY
+                // TODO: Change the LINQ so that only the Object timelinekey items are selected
+                MainlineKeyObject nextKey = nextFrame.ObjectRefs.Where(x => x.Timeline == currentKey.Timeline).FirstOrDefault();//.FindObject(currentKey.Id);
+                SpriterTimeline timeline = (nextKey == null ? animation.Value.Timelines[currentKey.Timeline]
+                                                          : animation.Value.Timelines[nextKey.Timeline]);
+
+                // TODO: Too many g'damn checks
+                if (timeline.Type != TimelineType.Object)
+                    continue;
+
+                TimelineKey timelineKey = (nextKey == null ? timeline.Keys[currentKey.Key] : timeline.Keys[nextKey.Key]);
+                if (timelineKey == null)
+                    continue;
+
+                TimelineKeyObject next = timelineKey.Item as TimelineKeyObject;
+                frameImages.Add(
+                    Tween(
+                        animation.Value.Timelines[currentKey.Timeline].Keys[currentKey.Key].Item as TimelineKeyObject,
+                        next,
+                        amount,
+                        animation.Value.Timelines[currentKey.Timeline].Keys[currentKey.Key].DoSpin,
+                        currentKey.ZIndex,
+                        currentKey.Parent
+                    )
+                );
+            }
+
+            return frameImages;
+        }
+
+        /// <summary>
+        /// Precalculates tweens for the point positions
+        /// </summary>
+        /// <param name="current">The current frame</param>
+        /// <param name="nextFrame">The next frame</param>
+        /// <param name="animation">The animation</param>
+        /// <param name="amount">The amount of tween</param>
+        /// <returns>A list of point frames</returns>
+        private static List<SpriterFramePoint> preparePointFrames(MainlineKey current, MainlineKey nextFrame, KeyValuePair<int, SpriterAnimation> animation, float amount)
+        {
+            List<SpriterFramePoint> framePoints = new List<SpriterFramePoint>();
+            foreach (MainlineKeyObject currentKey in current.ObjectRefs)
+            {
+                // TODO: IF TIMELINE DOESN'T HAVE A KEY AT THE END THE TWEEN WILL BE CHOPPY ON REPLAY
+                // TODO: Change the LINQ so that only the Point timelinekey items are selected
+                MainlineKeyObject nextKey = nextFrame.ObjectRefs.Where(x => x.Timeline == currentKey.Timeline).FirstOrDefault();//.FindObject(currentKey.Id);
+                SpriterTimeline timeline = (nextKey == null ? animation.Value.Timelines[currentKey.Timeline]
+                                                          : animation.Value.Timelines[nextKey.Timeline]);
+
+                // TODO: Too many g'damn checks
+                if (timeline.Type != TimelineType.Point)
+                    continue;
+
+                TimelineKey timelineKey = (nextKey == null ? timeline.Keys[currentKey.Key] : timeline.Keys[nextKey.Key]);
+                if (timelineKey == null)
+                    continue;
+
+                TimelineKeyPoint next = timelineKey.Item as TimelineKeyPoint;
+                framePoints.Add(
+                    Tween(
+                        animation.Value.Timelines[currentKey.Timeline].Keys[currentKey.Key].Item as TimelineKeyPoint,
+                        next,
+                        amount,
+                        animation.Value.Timelines[currentKey.Timeline].Keys[currentKey.Key].DoSpin,
+                        currentKey.ZIndex,
+                        currentKey.Parent
+                    )
+                );
+            }
+
+            return framePoints;
+        }
+
+
+        /// <summary>
+        /// Precalculates tweens for the bone animations
+        /// </summary>
+        /// <param name="current">The current frame</param>
+        /// <param name="nextFrame">The next frame</param>
+        /// <param name="animation">The animation</param>
+        /// <param name="amount">The amount of tween</param>
+        /// <returns>A list of bone frames</returns>
+        private static List<SpriterFrameBone> prepareBoneFrames(MainlineKey current, MainlineKey nextFrame, KeyValuePair<int, SpriterAnimation> animation, float amount)
+        {
+            List<SpriterFrameBone> frameBones = new List<SpriterFrameBone>();
+            foreach (MainlineKeyBone currentBone in current.BoneRefs)
+            {
+                MainlineKeyBone nextBone = nextFrame.BoneRefs.Where(x => x.Timeline == currentBone.Timeline).FirstOrDefault();//FindBone(currentBone.Id);
+                TimelineKey timelineKey = (nextBone == null ? animation.Value.Timelines[currentBone.Timeline].Keys[currentBone.Key]
+                                                         : animation.Value.Timelines[nextBone.Timeline].Keys[nextBone.Key]);
+
+                if (timelineKey == null)
+                    continue;
+
+                TimelineKeyBone next = timelineKey.Item as TimelineKeyBone;
+                frameBones.Add(
+                    Tween(
+                        animation.Value.Timelines[currentBone.Timeline].Keys[currentBone.Key].Item as TimelineKeyBone,
+                        next,
+                        amount,
+                        animation.Value.Timelines[currentBone.Timeline].Keys[currentBone.Key].DoSpin,
+                        currentBone.Parent
+                    )
+                );
+            }
+
+            return frameBones;
+        }
+
+
         /// <summary>
         /// Loads all the relevant data from the SCML file
         /// </summary>
@@ -201,7 +296,10 @@ namespace MonoSpriter
                     {
                         Console.WriteLine(e.Message);
                     }
-                    catch (Exception) { }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                    }
                 }
                 _sprites.Add(folder.Id, spriteList);
             }
@@ -214,6 +312,8 @@ namespace MonoSpriter
 
 
         #region Tween Methods
+        //TODO: Make into a template function
+
         /// <summary>
         /// Makes a tween of two objects
         /// </summary>
@@ -279,6 +379,56 @@ namespace MonoSpriter
         {
             SpriterFrameBone result = new SpriterFrameBone();
             result.Parent = parent;
+            result.Scale = Vector2.Lerp(prev.Scale, next.Scale, amount);
+            result.Position = Vector2.Lerp(prev.Position, next.Position, amount);
+            result.Alpha = MathHelper.Lerp(prev.Alpha, next.Alpha, amount);
+
+            float angleA = prev.Angle;
+            float angleB = next.Angle;
+            if (isClockwise)
+            {
+                if (angleB - angleA < 0)
+                {
+                    angleB += MathHelper.TwoPi;
+                }
+                else
+                {
+                    angleA %= MathHelper.TwoPi;
+                    angleB %= MathHelper.TwoPi;
+                }
+            }
+            else
+            {
+                if (angleB - angleA > 0.0f)
+                {
+                    angleB -= MathHelper.TwoPi;
+                }
+                else
+                {
+                    angleA %= MathHelper.TwoPi;
+                    angleB %= MathHelper.TwoPi;
+                }
+            }
+
+            result.Angle = MathHelper.Lerp(angleA, angleB, amount);
+            return result;
+        }
+
+        /// <summary>
+        /// Makes a tween of two points
+        /// </summary>
+        /// <param name="prev">Previous point</param>
+        /// <param name="next">Next point</param>
+        /// <param name="amount">The amount to tween</param>
+        /// <param name="isClockwise">Whether this is a clockwise tween</param>
+        /// <param name="zIndex">The zIndex of the frame</param>
+        /// <param name="parent">The parent (-1 for root)</param>
+        /// <returns>A new frame point</returns>
+        private static SpriterFramePoint Tween(TimelineKeyPoint prev, TimelineKeyPoint next, float amount, bool isClockwise, int zIndex, int parent)
+        {
+            SpriterFramePoint result = new SpriterFramePoint();
+            result.Parent = parent;
+            result.ZIndex = zIndex;
             result.Scale = Vector2.Lerp(prev.Scale, next.Scale, amount);
             result.Position = Vector2.Lerp(prev.Position, next.Position, amount);
             result.Alpha = MathHelper.Lerp(prev.Alpha, next.Alpha, amount);

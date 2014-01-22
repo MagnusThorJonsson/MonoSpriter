@@ -5,7 +5,20 @@ using System.Xml.Linq;
 using MonoSpriter.Timeline;
 
 namespace MonoSpriter.Animation
-{    
+{
+    /// <summary>
+    /// The Animation type.
+    /// Used to categorize the type of timeline being animated.
+    /// </summary>
+    public enum TimelineType
+    {
+        Object,
+        Bone,
+        Point,
+        Box
+    }
+
+
     /// <summary>
     /// Spriter Timeline data object.
     /// Handles the animation timelines
@@ -17,6 +30,13 @@ namespace MonoSpriter.Animation
     internal sealed class SpriterTimeline
     {
         #region Variables & Properties
+        /// <summary>
+        /// The type of items contain within this timeline key
+        /// </summary>
+        public TimelineType Type { get { return _type; } }
+        private TimelineType _type;
+
+        
         /// <summary>
         /// Timeline id
         /// </summary>
@@ -50,10 +70,22 @@ namespace MonoSpriter.Animation
             if (element.Attribute("name") != null)
                 _name = element.Attribute("name").Value;
 
+            if (element.Attribute("object_type") != null)
+            {
+                if (element.Attribute("object_type").Value.Equals("bone"))
+                    _type = TimelineType.Bone;
+                else if (element.Attribute("object_type").Value.Equals("box"))
+                    _type = TimelineType.Box;
+                else if (element.Attribute("object_type").Value.Equals("point"))
+                    _type = TimelineType.Point;
+                else // Sprite Object
+                    _type = TimelineType.Object;
+            }
+
             _keys = new Dictionary<int, TimelineKey>();
             foreach (XElement row in element.Elements())
             {
-                TimelineKey key = new TimelineKey(row);
+                TimelineKey key = new TimelineKey(row, _type);
                 _keys.Add(key.Id, key);
             }
         }

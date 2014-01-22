@@ -15,7 +15,7 @@ namespace MonoSpriter.Timeline
     ///   <key id="0">
     ///     <bone x="5" y="40" angle="451.59114" scale_x="0.18527"/>
     /// </summary>
-    internal class TimelineKeyBone
+    internal class TimelineKeyBone : ITimelineKeyItem
     {
         #region Variables & Properties
         /// <summary>
@@ -59,7 +59,7 @@ namespace MonoSpriter.Timeline
 
             if (element.Attribute("angle") != null)
                 angle = -MathHelper.ToRadians(float.Parse(element.Attribute("angle").Value, CultureInfo.InvariantCulture));
-
+            
             scale = Vector2.One;
             if (element.Attribute("scale_x") != null)
                 scale.X = float.Parse(element.Attribute("scale_x").Value, CultureInfo.InvariantCulture);

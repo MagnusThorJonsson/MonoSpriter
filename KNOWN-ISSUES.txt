@@ -1,0 +1,4 @@
+﻿
+2014-01-21
+==========
+* Tween issue : If a timeline doesn't have a key at the end the Tween will be choppy on the replay

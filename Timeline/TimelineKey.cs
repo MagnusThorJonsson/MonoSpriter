@@ -14,7 +14,7 @@ namespace MonoSpriter.Timeline
     ///   <key id="0" spin="0">
     ///     <object folder="1" file="0" x="-20.399667" y="0.10202" angle="180.740013" scale_x="4.080783"/>
     /// </summary>
-    internal sealed class TimelineKey 
+    internal sealed class TimelineKey
     {
         #region Variables & Properties
         /// <summary>
@@ -38,17 +38,12 @@ namespace MonoSpriter.Timeline
         public bool DoSpin { get { return _doSpin; } }
         private bool _doSpin;
 
+
         /// <summary>
         /// The bone connected to this timeline key
         /// </summary>
-        public TimelineKeyBone Bone { get { return _bone; } }
-        private TimelineKeyBone _bone;
-
-        /// <summary>
-        /// The sprite or object connected to this timeline key
-        /// </summary>
-        public TimelineKeyObject Object { get { return _object; } }
-        private TimelineKeyObject _object;
+        public ITimelineKeyItem Item { get { return _item; } }
+        private ITimelineKeyItem _item;
         #endregion
 
 
@@ -57,13 +52,14 @@ namespace MonoSpriter.Timeline
         /// Constructor that takes in an XElement containing the Spriter timeline key data
         /// </summary>
         /// <param name="element">The XElement containing the data</param>
-        public TimelineKey(XElement element)
+        /// <param name="type">The type of animation</param>
+        public TimelineKey(XElement element, TimelineType type = TimelineType.Object)
         {
             if (element.Attribute("id") != null)
                 _id = int.Parse(element.Attribute("id").Value);
             else
                 _id = -1;
-
+            
             if (element.Attribute("time") != null)
                 _time = int.Parse(element.Attribute("time").Value);
             else
@@ -74,13 +70,17 @@ namespace MonoSpriter.Timeline
             else
                 _doSpin = false;
 
-            XElement obj = element.Elements().Where(s => string.Equals(s.Name.ToString().ToLower(), "object")).FirstOrDefault();
-            if (obj != null)
-                _object = new TimelineKeyObject(obj);
-
-            XElement bone = element.Elements().Where(s => string.Equals(s.Name.ToString().ToLower(), "bone")).FirstOrDefault();
-            if (bone != null)
-                _bone = new TimelineKeyBone(bone);
+            // TODO: Add a list container for the child elements when and if the specs add that feature
+            XElement item = element.Elements().FirstOrDefault();
+            if (item != null)
+            {
+                if (type == TimelineType.Object)
+                    _item = new TimelineKeyObject(item);
+                else if (type == TimelineType.Bone)
+                    _item = new TimelineKeyBone(item);
+                else if (type == TimelineType.Point)
+                    _item = new TimelineKeyPoint(item);
+            }
         }
         #endregion
     }

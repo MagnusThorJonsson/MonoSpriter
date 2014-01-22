@@ -11,7 +11,7 @@ namespace MonoSpriter.Animation
     /// </summary>
     internal sealed class SpriterFrameBone
     {
-                #region Variables & Properties
+        #region Variables & Properties
         /// <summary>
         /// Bone parent id
         /// </summary>
@@ -21,26 +21,6 @@ namespace MonoSpriter.Animation
             internal set { _parent = value; }
         }
         private int _parent;
-
-        /// <summary>
-        /// Bone content folder id
-        /// </summary>
-        public int Folder 
-        { 
-            get { return _spriterFolder; }
-            internal set { _spriterFolder = value; }
-        }
-        private int _spriterFolder;
-
-        /// <summary>
-        /// Bone content file id
-        /// </summary>
-        public int File 
-        { 
-            get { return _spriterFile; }
-            internal set { _spriterFile = value; } 
-        }
-        private int _spriterFile;
 
         /// <summary>
         /// Bone position
@@ -91,8 +71,6 @@ namespace MonoSpriter.Animation
         public SpriterFrameBone()
         {
             _parent = -1;
-            _spriterFolder = -1;
-            _spriterFile = -1;
             _position = Vector2.Zero;
             _angle = 0f;
             _scale = Vector2.One;
@@ -102,17 +80,13 @@ namespace MonoSpriter.Animation
         /// <summary>
         /// Creates a Frame Bone
         /// </summary>
-        /// <param name="folder">Spriter content folder id</param>
-        /// <param name="file">Spriter content file id</param>
         /// <param name="position">Position</param>
         /// <param name="angle">Angle</param>
         /// <param name="scale">Scale</param>
         /// <param name="alpha">Alpha</param>
-        public SpriterFrameBone(int folder, int file, Vector2 position, float angle, Vector2 scale, float alpha)
+        public SpriterFrameBone(Vector2 position, float angle, Vector2 scale, float alpha)
         {
             _parent = -1;
-            _spriterFolder = folder;
-            _spriterFile = file;
             _position = position;
             _angle = angle;
             _scale = scale;
@@ -124,17 +98,14 @@ namespace MonoSpriter.Animation
         /// Creates a Frame Bone
         /// </summary>
         /// <param name="parent">The frame bone parent id</param>
-        /// <param name="folder">Spriter content folder id</param>
-        /// <param name="file">Spriter content file id</param>
         /// <param name="position">Position</param>
         /// <param name="angle">Angle</param>
         /// <param name="scale">Scale</param>
         /// <param name="alpha">Alpha</param>
-        public SpriterFrameBone(int parent, int folder, int file, Vector2 position, float angle, Vector2 scale, float alpha)
+        public SpriterFrameBone(int parent, Vector2 position, float angle, Vector2 scale, float alpha)
         {
             _parent = parent;
-            _spriterFolder = folder;
-            _spriterFile = file;
+ 
             _position = position;
             _angle = angle;
             _scale = scale;

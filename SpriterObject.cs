@@ -115,6 +115,16 @@ namespace MonoSpriter
             set { _offset = value; }
         }
         private Vector2 _offset;
+
+        /// <summary>
+        /// The base layer depth for this spriter entity
+        /// </summary>
+        public float DepthBase
+        {
+            get { return _depthBase; }
+            set { _depthBase = value; }
+        }
+        private float _depthBase;
  
         private Dictionary<int, Dictionary<int, Texture2D>> _sprites;
         private SpriterEntity _entity;
@@ -131,12 +141,14 @@ namespace MonoSpriter
         /// <param name="fps">The frames per second the animations run at</param>
         /// <param name="entity">The entity used by this object</param>
         /// <param name="sprites">The Texture2D sprites used by the object</param>
-        internal SpriterObject(string name, int fps, SpriterEntity entity, Dictionary<int, Dictionary<int, Texture2D>> sprites)
+        /// <param name="depthBase">The base depth for this object</param>
+        internal SpriterObject(string name, int fps, SpriterEntity entity, Dictionary<int, Dictionary<int, Texture2D>> sprites, float depthBase)
         {
             _name = name;
             _fps = fps;
             _entity = entity;
             _sprites = sprites;
+            _depthBase = depthBase;
 
             if (entity.Animations.Count > 0)
                 _currentAnimation = entity.Animations[0];
@@ -394,7 +406,6 @@ namespace MonoSpriter
         {
             SpriterFrame frame = _currentAnimation.Frames[_frame];
 
-            float layer = 0;
             foreach (SpriterFrameImage frameImage in frame.Frames)
             {
                 RenderedPosition pos = GetRenderedPosition(frameImage);
@@ -407,12 +418,97 @@ namespace MonoSpriter
                     pos.Pivot,
                     pos.Scale,
                     pos.Effects,
-                    layer
+                    _depthBase - ((float)frameImage.ZIndex * 0.0000001f) // TODO: using float.Epsilon is fucking up the layer situation so this is a temporary shitfix
                 );
-
-                layer += 0.01f;
             }
         }
+
+
+        /// <summary>
+        /// Debug function
+        /// </summary>
+        /// <param name="graphicsDevice">The graphic device that holds the created texture (NEED TO CACHE THIS TEXTURE CREATION)</param>
+        /// <param name="spriteBatch">The spritebatch</param>
+        public void DrawPoints(GraphicsDevice graphicsDevice, SpriteBatch spriteBatch)
+        {
+            // TESTING
+            // TODO: Cache this and generate on creation
+            Texture2D rect = new Texture2D(graphicsDevice, 4, 4);
+            Color[] data = new Color[4*4];
+            for(int i=0; i < data.Length; ++i) 
+                data[i] = Color.Red;
+            rect.SetData(data);
+
+            SpriterFrame frame = _currentAnimation.Frames[_frame];
+            foreach (SpriterFramePoint framePoint in frame.Points)
+            {
+                RenderedPosition pos = GetRenderedPosition(framePoint);
+                spriteBatch.Draw(
+                    rect,
+                    pos.Position - new Vector2(2, 2),
+                    null,
+                    Color.White * pos.Alpha,
+                    pos.Angle,
+                    pos.Pivot,
+                    pos.Scale,
+                    pos.Effects,
+                    _depthBase - ((float)framePoint.ZIndex * 0.0000001f) // TODO: using float.Epsilon is fucking up the layer situation so this is a temporary shitfix
+                );
+            }
+        }
+
+
+        /// <summary>
+        /// Calculates the rendered position of the point
+        /// </summary>
+        /// <param name="point">The Spriter Frame point</param>
+        /// <returns>A new rendered position object</returns>
+        private RenderedPosition GetRenderedPosition(SpriterFramePoint point)
+        {
+            // Apply transforms
+            SpriterFrameTransform transform = point.Transform;
+            RenderedPosition result = new RenderedPosition();
+
+            result.Alpha = transform.Alpha;
+
+            result.Position.Y = Position.Y + (transform.Position.Y * (DoFlipY ? -1 : 1));
+            result.Position.X = Position.X + (transform.Position.X * (DoFlipX ? -1 : 1));
+            result.Position += _offset;
+
+            bool flipX = DoFlipX;
+            bool flipY = DoFlipY;
+
+            result.Angle = transform.Angle;
+            if (flipX != flipY)
+            {
+                result.Angle *= -1;
+            }
+
+            result.Scale = transform.Scale;
+            if (result.Scale.X < 0)
+            {
+                result.Scale.X = -result.Scale.X;
+                flipX = !flipX;
+            }
+            if (result.Scale.Y < 0)
+            {
+                result.Scale.Y = -result.Scale.Y;
+                flipY = !flipY;
+            }
+
+            result.Effects = SpriteEffects.None;
+            if (flipX)
+            {
+                result.Effects |= SpriteEffects.FlipHorizontally;
+            }
+            if (flipY)
+            {
+                result.Effects |= SpriteEffects.FlipVertically;
+            }
+
+            return result;
+        }
+
         #endregion
 
     }

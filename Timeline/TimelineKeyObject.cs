@@ -14,10 +14,10 @@ namespace MonoSpriter.Timeline
     /// Used with the Timeline animations.
     /// 
     /// DATA:
-    ///   <key id="4" time="1668" spin="0">
-    ///     <object folder="6" file="1" x="32.480097" y="-1.612087" angle="355.339223" scale_x="5.553945"/>
+    ///   < key id="4" time="1668" spin="0">
+    ///     < object folder="6" file="1" x="32.480097" y="-1.612087" angle="355.339223" scale_x="5.553945"/>
     /// </summary>
-    internal sealed class TimelineKeyObject : TimelineKeyBone
+    internal sealed class TimelineKeyObject : TimelineKeyBone, ITimelineKeyItem
     {
         #region Variables & Properties
         /// <summary>
