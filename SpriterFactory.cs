@@ -52,16 +52,16 @@ namespace MonoSpriter
         /// <param name="path">The path to the entities assets</param>
         /// <param name="name">The name of the entity</param>
         /// <param name="fps">The frames per second the animations run at</param>
-        /// <param name="scale">The scale of the object</param>
         /// <param name="offset">The offset</param>
         /// <param name="baseDepth">The base depth for this entity</param>
+        /// <param name="tint">The color overlay for the sprite</param>
         /// <returns>A new spriter object</returns>
-        public static SpriterObject Create(XDocument xmlDoc, ContentManager content, string path, string name, int fps, Vector2 scale, Vector2 offset, float baseDepth)
+        public static SpriterObject Create(XDocument xmlDoc, ContentManager content, string path, string name, int fps, Vector2 offset, float baseDepth, Color tint)
         {
             // Prepare data
             LoadData(path, xmlDoc, content);
 
-            return Create(name, fps, scale, offset, baseDepth);
+            return Create(name, fps, offset, baseDepth, tint);
         }
 
         /// <summary>
@@ -69,11 +69,11 @@ namespace MonoSpriter
         /// </summary>
         /// <param name="name">The name of the entity</param>
         /// <param name="fps">The frames per second the animations run at</param>
-        /// <param name="scale">The scale of the object</param>
         /// <param name="offset">The offset</param>
         /// <param name="baseDepth">The base depth for this entity</param>
+        /// <param name="tint">The color overlay for the sprite</param>
         /// <returns>A new spriter object</returns>
-        public static SpriterObject Create(string name, int fps, Vector2 scale, Vector2 offset, float baseDepth)
+        public static SpriterObject Create(string name, int fps, Vector2 offset, float baseDepth, Color tint)
         {
             // TODO: All of this needs a refactoring, data structure not completely A-OK
             // Get the entity by name
@@ -126,16 +126,16 @@ namespace MonoSpriter
                     );
 
                     foreach (SpriterFrameImage image in frame.Frames)
-                        image.Transform = frame.Transform(image, scale, offset);
+                        image.Transform = frame.Transform(image, Vector2.One, offset);
 
                     foreach (SpriterFramePoint point in frame.Points)
-                        point.Transform = frame.Transform(point, scale, offset);
+                        point.Transform = frame.Transform(point, Vector2.One, offset);
 
                     animation.Value.Frames.Add(frame);
                 }
             }
 
-            return new SpriterObject(name, fps, entity, new Dictionary<int,Dictionary<int,Texture2D>>(_sprites), baseDepth);
+            return new SpriterObject(name, fps, entity, new Dictionary<int,Dictionary<int,Texture2D>>(_sprites), baseDepth, tint);
         }
         #endregion
 

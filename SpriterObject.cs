@@ -11,7 +11,7 @@ namespace MonoSpriter
     /// Spriter Object.
     /// The main object, handles animations and texture content
     /// </summary>
-    public sealed class SpriterObject
+    public sealed class SpriterObject : ICloneable
     {
         /// <summary>
         /// Helper Struct used for calculating positional translation
@@ -125,7 +125,26 @@ namespace MonoSpriter
             set { _depthBase = value; }
         }
         private float _depthBase;
- 
+
+        /// <summary>
+        /// The color overlay for the sprite
+        /// </summary>
+        public Color Tint 
+        { 
+            get { return _tint; }
+            set { _tint = value; }
+        }
+        private Color _tint;
+
+        /// <summary>
+        /// The current scale
+        /// </summary>
+        public Vector2 Scale
+        {
+            get { return _scale; }
+        }
+        private Vector2 _scale;
+
         private Dictionary<int, Dictionary<int, Texture2D>> _sprites;
         private SpriterEntity _entity;
         private double _elapsedTime;
@@ -142,19 +161,22 @@ namespace MonoSpriter
         /// <param name="entity">The entity used by this object</param>
         /// <param name="sprites">The Texture2D sprites used by the object</param>
         /// <param name="depthBase">The base depth for this object</param>
-        internal SpriterObject(string name, int fps, SpriterEntity entity, Dictionary<int, Dictionary<int, Texture2D>> sprites, float depthBase)
+        /// <param name="tint">The color overlay of the sprite</param>
+        internal SpriterObject(string name, int fps, SpriterEntity entity, Dictionary<int, Dictionary<int, Texture2D>> sprites, float depthBase, Color tint)
         {
             _name = name;
             _fps = fps;
             _entity = entity;
             _sprites = sprites;
             _depthBase = depthBase;
+            _tint = tint;
 
             if (entity.Animations.Count > 0)
                 _currentAnimation = entity.Animations[0];
 
             _isPlaying = false;
             _offset = Vector2.Zero;
+            _scale = Vector2.One;
         }
         #endregion
 
@@ -416,7 +438,7 @@ namespace MonoSpriter
                     Color.White * pos.Alpha,
                     pos.Angle,
                     pos.Pivot,
-                    pos.Scale,
+                    pos.Scale, 
                     pos.Effects,
                     _depthBase - ((float)frameImage.ZIndex * 0.0000001f) // TODO: using float.Epsilon is fucking up the layer situation so this is a temporary shitfix
                 );
@@ -447,7 +469,7 @@ namespace MonoSpriter
                     rect,
                     pos.Position - new Vector2(2, 2),
                     null,
-                    Color.White * pos.Alpha,
+                    _tint * pos.Alpha,
                     pos.Angle,
                     pos.Pivot,
                     pos.Scale,
@@ -508,8 +530,70 @@ namespace MonoSpriter
 
             return result;
         }
-
         #endregion
 
+
+        #region Scale Methods
+        /// <summary>
+        /// Sets a new scale for the sprite
+        /// </summary>
+        /// <param name="width">The new width scale</param>
+        /// <param name="height">The new height scale</param>
+        public void SetScale(float width, float height)
+        {
+            SetScale(new Vector2(width, height));
+        }
+
+
+        /// <summary>
+        /// Sets a new scale for the sprite
+        /// </summary>
+        /// <param name="scale">The new scale to set</param>
+        public void SetScale(Vector2 scale)
+        {
+            _scale = scale;
+
+            foreach (SpriterAnimation animation in _entity.Animations.Values)
+            {
+                foreach (SpriterFrame frame in animation.Frames)
+                {
+                    foreach (SpriterFrameImage image in frame.Frames)
+                        image.Transform = frame.Transform(image, scale, _offset);
+
+                    foreach (SpriterFramePoint point in frame.Points)
+                        point.Transform = frame.Transform(point, scale, _offset);
+                }
+            }
+        }
+        #endregion
+
+
+        #region ICloneable Methods
+        /// <summary>
+        /// Clones the current object 
+        /// </summary>
+        /// <returns>A cloned version of this SpriterObject</returns>
+        public Object Clone()
+        {
+            SpriterObject obj = new SpriterObject(
+                this._name,
+                this._fps,
+                this._entity,
+                this._sprites,
+                this._depthBase,
+                this._tint
+            );
+
+            obj._scale = this._scale;
+            obj._position = this._position;
+            obj._currentAnimation = this._currentAnimation;
+            obj._doFlipX = this._doFlipX;
+            obj._doFlipY = this._doFlipY;
+            obj._frame = this._frame;
+            obj._isPlaying = this._isPlaying;
+
+            return obj;
+        }
+        #endregion
     }
 }
