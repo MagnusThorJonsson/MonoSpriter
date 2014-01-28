@@ -430,12 +430,13 @@ namespace MonoSpriter
 
             foreach (SpriterFrameImage frameImage in frame.Frames)
             {
+                // TODO: Could probably add the scale directly instead of iterating through the animation frames (in SetScale)
                 RenderedPosition pos = GetRenderedPosition(frameImage);
                 spriteBatch.Draw(
                     _sprites[frameImage.Folder][frameImage.File],
                     pos.Position,
                     null,
-                    Color.White * pos.Alpha,
+                    _tint * pos.Alpha,
                     pos.Angle,
                     pos.Pivot,
                     pos.Scale, 
