@@ -58,7 +58,7 @@ namespace MonoSpriter.Timeline
             else
                 _spriterFile = -1;
 
-            SpriterFile file = SpriterFactory._folders[Folder].Files[File];
+            SpriterFile file = SpriterFactory._currentFolders[Folder].Files[File];
             _pivot = Vector2.Zero;
             if (element.Attribute("pivot_x") != null)
                 _pivot.X = float.Parse(element.Attribute("pivot_x").Value, CultureInfo.InvariantCulture);

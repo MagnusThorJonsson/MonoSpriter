@@ -11,9 +11,39 @@ using MonoSpriter.Animation;
 using MonoSpriter.Data;
 using MonoSpriter.Mainline;
 using MonoSpriter.Timeline;
+using System.Xml;
 
 namespace MonoSpriter
 {
+    /// <summary>
+    /// Resource container for SpriterObjects
+    /// </summary>
+    internal class SpriterResources
+    {
+        #region Variables & Properties
+        internal Dictionary<int, Dictionary<int, Texture2D>> sprites;
+        internal List<SpriterEntity> entities;
+        internal Dictionary<int, SpriterFolder> folders;
+        #endregion
+
+
+        #region Constructor
+        /// <summary>
+        /// Creates a Spriter resource container
+        /// </summary>
+        /// <param name="sprites">The sprite dictionary</param>
+        /// <param name="entities">The entity list</param>
+        /// <param name="folders">The folder list</param>
+        public SpriterResources(Dictionary<int, Dictionary<int, Texture2D>> sprites, List<SpriterEntity> entities, Dictionary<int, SpriterFolder> folders)
+        {
+            this.sprites = sprites;
+            this.entities = entities;
+            this.folders = folders;
+        }
+        #endregion
+    }
+
+
     /// <summary>
     /// Spriter Factory.
     /// 
@@ -22,9 +52,12 @@ namespace MonoSpriter
     public class SpriterFactory
     { 
         #region Variables & Properties
-        private static Dictionary<int, Dictionary<int, Texture2D>> _sprites;
-        private static List<SpriterEntity> _entities;
-        internal static Dictionary<int, SpriterFolder> _folders;
+        private static Dictionary<string, SpriterObject> _objects;
+        private static Dictionary<string, SpriterResources> _resources;
+
+        private static Dictionary<int, Dictionary<int, Texture2D>> _currentSprites;
+        private static List<SpriterEntity> _currentEntities;
+        internal static Dictionary<int, SpriterFolder> _currentFolders;
         #endregion
 
 
@@ -34,9 +67,12 @@ namespace MonoSpriter
         /// </summary>
         static SpriterFactory()
         {
-            _sprites = new Dictionary<int, Dictionary<int, Texture2D>>();
-            _entities = new List<SpriterEntity>();
-            _folders = new Dictionary<int, SpriterFolder>();
+            _objects = new Dictionary<string, SpriterObject>();
+            _resources = new Dictionary<string, SpriterResources>();
+
+            _currentSprites = new Dictionary<int, Dictionary<int, Texture2D>>();
+            _currentEntities = new List<SpriterEntity>();
+            _currentFolders = new Dictionary<int, SpriterFolder>();
 
 
         }
@@ -45,39 +81,66 @@ namespace MonoSpriter
 
         #region Factory Methods
         /// <summary>
+        /// Creates a Spriter Object from cached objects
+        /// </summary>
+        /// <param name="filePath">The path to the content file</param>
+        /// <param name="name">The name of the entity</param>
+        /// <returns>A spriter object</returns>
+        public static SpriterObject Create(string filePath, string name)
+        {
+            if (_objects.ContainsKey(name + ":" + filePath))
+                return (SpriterObject)_objects[name + ":" + filePath].Clone();
+
+            return null;
+        }
+
+
+        /// <summary>
         /// Creates a new Spriter Object from the passed in data
         /// </summary>
-        /// <param name="xmlDoc">The SCML file</param>
         /// <param name="content">The content manager</param>
-        /// <param name="path">The path to the entities assets</param>
+        /// <param name="filePath">The path to the content file</param>
+        /// <param name="assetPath">The path to the entities assets</param>
         /// <param name="name">The name of the entity</param>
         /// <param name="fps">The frames per second the animations run at</param>
         /// <param name="offset">The offset</param>
         /// <param name="baseDepth">The base depth for this entity</param>
         /// <param name="tint">The color overlay for the sprite</param>
         /// <returns>A new spriter object</returns>
-        public static SpriterObject Create(XDocument xmlDoc, ContentManager content, string path, string name, int fps, Vector2 offset, float baseDepth, Color tint)
+        public static SpriterObject Create(ContentManager content, string filePath, string assetPath, string name, int fps, Vector2 offset, float baseDepth, Color tint)
         {
             // Prepare data
-            LoadData(path, xmlDoc, content);
+            if (_resources.ContainsKey(filePath))
+            {
+                _currentSprites = _resources[filePath].sprites;
+                _currentEntities = _resources[filePath].entities;
+                _currentFolders = _resources[filePath].folders;
+            }
+            else
+                LoadData(filePath, assetPath, content);
 
-            return Create(name, fps, offset, baseDepth, tint);
+            // Check cache
+            if (_objects.ContainsKey(name + ":" + filePath))
+                return (SpriterObject)_objects[name + ":" + filePath].Clone();
+
+            return Create(filePath, name, fps, offset, baseDepth, tint);
         }
 
         /// <summary>
         /// Creates a new Spriter Object from already loaded data
         /// </summary>
+        /// <param name="filePath">The path to the data file</param>
         /// <param name="name">The name of the entity</param>
         /// <param name="fps">The frames per second the animations run at</param>
         /// <param name="offset">The offset</param>
         /// <param name="baseDepth">The base depth for this entity</param>
         /// <param name="tint">The color overlay for the sprite</param>
         /// <returns>A new spriter object</returns>
-        public static SpriterObject Create(string name, int fps, Vector2 offset, float baseDepth, Color tint)
+        public static SpriterObject Create(string filePath, string name, int fps, Vector2 offset, float baseDepth, Color tint)
         {
             // TODO: All of this needs a refactoring, data structure not completely A-OK
             // Get the entity by name
-            SpriterEntity entity = _entities.Find(s => string.Equals(s.Name, name));
+            SpriterEntity entity = _currentEntities.Find(s => string.Equals(s.Name, name));
             if (entity == null)
                 throw new ArgumentNullException("name");
 
@@ -135,7 +198,10 @@ namespace MonoSpriter
                 }
             }
 
-            return new SpriterObject(name, fps, entity, new Dictionary<int,Dictionary<int,Texture2D>>(_sprites), baseDepth, tint);
+            // Add to cache
+            _objects.Add(name + ":" + filePath , new SpriterObject(name, fps, entity, new Dictionary<int, Dictionary<int, Texture2D>>(_currentSprites), baseDepth, tint));
+
+            return _objects[name + ":" + filePath];
         }
         #endregion
 
@@ -227,7 +293,6 @@ namespace MonoSpriter
             return framePoints;
         }
 
-
         /// <summary>
         /// Precalculates tweens for the bone animations
         /// </summary>
@@ -267,46 +332,54 @@ namespace MonoSpriter
         /// <summary>
         /// Loads all the relevant data from the SCML file
         /// </summary>
-        /// <param name="path">The path to the entities assets</param>
-        /// <param name="xmlDoc">The SCML data</param>
+        /// <param name="filePath">The path to the data file</param>
+        /// <param name="assetPath">The path to the entities assets</param>
         /// <param name="content">The content manager to hold the sprites</param>
-        private static void LoadData(string path, XDocument xmlDoc, ContentManager content)
+        private static void LoadData(string filePath, string assetPath, ContentManager content)
         {
-            // Reset content
-            _sprites.Clear();
-            _entities.Clear();
-            _folders.Clear();
-
-            // Ready Folders and Textures
-            foreach (XElement folderRow in xmlDoc.Descendants("spriter_data").Elements("folder"))
+            using (XmlReader reader = XmlReader.Create(filePath))
             {
-                SpriterFolder folder = new SpriterFolder(folderRow);
-                _folders.Add(folder.Id, folder);
+                XDocument xmlDoc = XDocument.Load(reader);
 
-                Dictionary<int, Texture2D> spriteList = new Dictionary<int, Texture2D>();
-                foreach (SpriterFile file in folder.Files.Values)
+                // Reset content
+                _currentSprites.Clear();
+                _currentEntities.Clear();
+                _currentFolders.Clear();
+
+                // Ready Folders and Textures
+                foreach (XElement folderRow in xmlDoc.Descendants("spriter_data").Elements("folder"))
                 {
-                    try
-                    {
-                        string assetName = file.Name.Substring(0, file.Name.Length - System.IO.Path.GetExtension(file.Name).Length);
-                        Texture2D tex = content.Load<Texture2D>(path + assetName.Replace("/", "\\"));
-                        spriteList[file.Id] = tex;
-                    }
-                    catch (ContentLoadException e)
-                    {
-                        Console.WriteLine(e.Message);
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e.Message);
-                    }
-                }
-                _sprites.Add(folder.Id, spriteList);
-            }
+                    SpriterFolder folder = new SpriterFolder(folderRow);
+                    _currentFolders.Add(folder.Id, folder);
 
-            // Ready Entities
-            foreach (XElement entityRow in xmlDoc.Descendants("spriter_data").Elements("entity"))
-                _entities.Add(new SpriterEntity(entityRow));
+                    Dictionary<int, Texture2D> spriteList = new Dictionary<int, Texture2D>();
+                    foreach (SpriterFile file in folder.Files.Values)
+                    {
+                        try
+                        {
+                            string assetName = file.Name.Substring(0, file.Name.Length - System.IO.Path.GetExtension(file.Name).Length);
+                            Texture2D tex = content.Load<Texture2D>(assetPath + assetName.Replace("/", "\\"));
+                            spriteList[file.Id] = tex;
+                        }
+                        catch (ContentLoadException e)
+                        {
+                            Console.WriteLine(e.Message);
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e.Message);
+                        }
+                    }
+                    _currentSprites.Add(folder.Id, spriteList);
+                }
+
+                // Ready Entities
+                foreach (XElement entityRow in xmlDoc.Descendants("spriter_data").Elements("entity"))
+                    _currentEntities.Add(new SpriterEntity(entityRow));
+
+                // Add to the resources container list
+                _resources.Add(filePath, new SpriterResources(_currentSprites, _currentEntities, _currentFolders));
+            }
         }
         #endregion
 
